@@ -58,13 +58,27 @@ export function table(rows: string[][]): string {
     .join("\n");
 }
 
-/** Round a box around the given lines, ignoring colour when measuring. */
+/**
+ * Round a box around the given lines, ignoring colour when measuring. Embedded
+ * newlines are split and every line is clipped to the terminal, since a stray
+ * long line from an API error would otherwise blow the border apart.
+ */
 export function box(lines: string[]): string {
-  const w = Math.max(...lines.map(width));
+  const max = Math.max(24, (process.stdout.columns || 80) - 4);
+  const flat = lines
+    .flatMap((l) => l.split("\n"))
+    .map((l) => (width(l) > max ? clip(l, max) : l));
+  const w = Math.min(max, Math.max(...flat.map(width)));
   const top = "╭" + "─".repeat(w + 2) + "╮";
   const bottom = "╰" + "─".repeat(w + 2) + "╯";
-  const body = lines.map((l) => `│ ${l}${" ".repeat(w - width(l))} │`);
+  const body = flat.map((l) => `│ ${l}${" ".repeat(Math.max(0, w - width(l)))} │`);
   return c.cyan([top, ...body, bottom].join("\n"));
+}
+
+/** Truncate to a visible width, dropping any colour rather than splitting it. */
+function clip(s: string, max: number): string {
+  const plain = s.replace(/\x1b\[[0-9;]*m/g, "");
+  return plain.length > max ? plain.slice(0, max - 1) + "…" : plain;
 }
 
 /** "12345" -> "12.3k", so the status line stays a fixed width. */

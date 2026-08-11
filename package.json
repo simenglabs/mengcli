@@ -1,6 +1,6 @@
 {
   "name": "@menglabs/mengcli",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Autonomous AI multi-agent coding CLI: describe the work, get back a git branch",
   "type": "module",
   "bin": {

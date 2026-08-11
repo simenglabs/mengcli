@@ -37,6 +37,17 @@ test("columns line up even when cells are coloured", () => {
   expect(plain[1]).not.toContain("DELIVERED600");
 });
 
+test("box survives embedded newlines and overlong lines", () => {
+  // Regression: a multi-line HTTP error split the border apart.
+  const lines = box(["ok", 'HTTP 401: {\n  "error": {\n    "message": "bad key"', "x".repeat(400)]).split("\n");
+  const widths = new Set(lines.map(width));
+  expect(widths.size).toBe(1);
+  expect(lines[0]!.startsWith("╭")).toBe(true);
+  expect(lines.at(-1)!.startsWith("╰")).toBe(true);
+  // Nothing wider than the terminal, whatever was passed in.
+  expect([...widths][0]!).toBeLessThanOrEqual(Math.max(24, (process.stdout.columns || 80) - 4) + 4);
+});
+
 test("token counts stay short", () => {
   expect(fmtTokens(0)).toBe("0");
   expect(fmtTokens(999)).toBe("999");
