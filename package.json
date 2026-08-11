@@ -1,0 +1,56 @@
+{
+  "name": "mengcli",
+  "version": "1.0.0",
+  "description": "Autonomous AI multi-agent coding CLI: describe the work, get back a git branch",
+  "type": "module",
+  "bin": {
+    "mengcli": "bin/mengcli.cjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "skills",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "bun src/index.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "bun test && tsc --noEmit"
+  },
+  "dependencies": {
+    "bun": "^1.3.0",
+    "zod": "^4.4.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "keywords": [
+    "ai",
+    "agent",
+    "cli",
+    "multi-agent",
+    "tmux",
+    "autonomous",
+    "coding-agent",
+    "llm"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/bun": "^1.3.14",
+    "typescript": "^7.0.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/menglabs/mengcli.git"
+  },
+  "homepage": "https://github.com/menglabs/mengcli#readme",
+  "bugs": {
+    "url": "https://github.com/menglabs/mengcli/issues"
+  },
+  "author": "Menglabs"
+}
