@@ -86,12 +86,37 @@ Bun ships with the package, so you do not need to install it separately.
 ## Quick start
 
 ```bash
-mengcli config                    # provider, model, API key
+mengcli config                    # pick a provider, paste a key
 mengcli doctor                    # verify everything is wired up
 
 cd ~/code/my-project
 mengcli                           # interactive shell
 ```
+
+`mengcli config` is a keyboard-driven wizard: arrow keys pick the provider,
+the URL and model are prefilled per provider, and the key is masked as you
+type and checked against the live API before anything is saved.
+
+```
+╭──────────────────────────────╮
+│ mengCLI setup                │
+│                              │
+│ first run — let's connect a  │
+│ model                        │
+╰──────────────────────────────╯
+
+Provider
+ ❯ Anthropic    claude-sonnet, claude-haiku
+   OpenAI       gpt-4o, o-series
+   OpenRouter   any model, one key
+   Groq         fast, OpenAI-compatible
+   Ollama       local, no API key
+   Custom       any OpenAI-compatible URL
+ ↑↓ move · enter select
+```
+
+Anthropic, OpenAI, OpenRouter, Groq and Ollama are presets; **Custom** takes
+any OpenAI-compatible endpoint. Ollama skips the key prompt entirely.
 
 Tasks started with `mengcli run` detach immediately — close the terminal, lock
 your laptop, they keep running. Check on them whenever:
@@ -208,7 +233,7 @@ git clone https://github.com/simenglabs/mengcli.git
 cd mengcli
 bun install
 
-bun test                # 24 tests, no network required
+bun test                # 26 tests, no network required
 bun run typecheck
 bun src/index.ts help   # run without installing
 ```

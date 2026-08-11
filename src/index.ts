@@ -1,25 +1,10 @@
 #!/usr/bin/env bun
 import { rm } from "fs/promises";
 import { existsSync } from "fs";
-import {
-  CONFIG_FILE,
-  DB_FILE,
-  SKILLS_DIR,
-  ensureDirs,
-  taskWorktree,
-  workspaceDir,
-} from "./paths.ts";
+import { CONFIG_FILE, DB_FILE, ensureDirs, taskWorktree, workspaceDir } from "./paths.ts";
 import { EXIT, MengError, notFound } from "./errors.ts";
 import { BANNER, ago, c, fail, info, table, warn } from "./ui.ts";
-import {
-  configExists,
-  defaultConfig,
-  getSecret,
-  loadConfig,
-  routeFor,
-  saveConfig,
-  setSecret,
-} from "./config.ts";
+import { configExists, getSecret, loadConfig, routeFor } from "./config.ts";
 import {
   TERMINAL,
   chargeTokens,
@@ -61,7 +46,6 @@ import {
   tmuxList,
 } from "./runner.ts";
 import { probeProvider } from "./llm.ts";
-import { BUILTIN_SKILLS } from "./agent.ts";
 
 // ------------------------------------------------------------------ arg parse
 
@@ -120,10 +104,25 @@ function statusColor(s: string): string {
   return c.cyan(s);
 }
 
+/**
+ * One line from the terminal. Opened once and reused: reading the stream per
+ * question waits for EOF, which on a tty never comes, so the second prompt
+ * would hang forever.
+ */
+let _rl: import("readline/promises").Interface | null = null;
+
 async function ask(question: string, fallback = ""): Promise<string> {
-  process.stderr.write(question + (fallback ? ` [${fallback}]` : "") + " ");
-  const line = (await new Response(Bun.stdin.stream()).text()).split("\n")[0] ?? "";
+  if (!_rl) {
+    const readline = await import("readline/promises");
+    _rl = readline.createInterface({ input: process.stdin, output: process.stderr });
+  }
+  const line = await _rl.question(question + (fallback ? ` [${fallback}]` : "") + " ");
   return line.trim() || fallback;
+}
+
+function closeAsk(): void {
+  _rl?.close();
+  _rl = null;
 }
 
 // ------------------------------------------------------------------ commands
@@ -156,41 +155,8 @@ async function cmdConfig(args: Args): Promise<number> {
     return EXIT.OK;
   }
 
-  if (!process.stdin.isTTY) {
-    throw new MengError("mengcli config needs an interactive terminal", EXIT.BAD_CONFIG);
-  }
-
-  // MVP: terminal prompts. The web UI arrives in v1.1 with the same schema.
-  info(c.cyan(BANNER));
-  info("Configure mengcli. Press enter to accept the default.\n");
-
-  const preset = await ask("Provider [anthropic/openai]:", "anthropic");
-  const isAnthropic = preset !== "openai";
-  const baseUrl = await ask(
-    "Base URL:",
-    isAnthropic ? "https://api.anthropic.com" : "https://api.openai.com/v1",
-  );
-  const model = await ask("Model:", isAnthropic ? "claude-sonnet-4-6" : "gpt-4o");
-  const key = await ask("API key (stored in the OS keychain):");
-  if (!key) throw new MengError("an API key is required", EXIT.BAD_CONFIG);
-
-  const cfg = defaultConfig(baseUrl, model, isAnthropic ? "anthropic" : "openai");
-  await setSecret("mengcli/provider/default", key);
-  await saveConfig(cfg);
-
-  // Write the built-in skills so they are visible and editable.
-  for (const [team, body] of Object.entries(BUILTIN_SKILLS)) {
-    const path = `${SKILLS_DIR}/${team}/SKILL.md`;
-    if (!existsSync(path)) await Bun.write(path, body + "\n");
-  }
-
-  info("\nverifying credentials...");
-  const err = await probeProvider(routeFor(cfg, "_default").provider, model);
-  if (err) warn(`provider check failed: ${err}`);
-  else info(c.green("provider ok"));
-
-  out(`\nsaved ${CONFIG_FILE}\nskills ${SKILLS_DIR}`, { config: CONFIG_FILE, ok: !err });
-  return EXIT.OK;
+  const { runWizard } = await import("./wizard.ts");
+  return runWizard();
 }
 
 async function cmdRun(args: Args): Promise<number> {
@@ -388,6 +354,7 @@ async function cmdMerge(args: Args): Promise<number> {
     info(`about to merge ${c.bold(task.branch)} into the current branch of ${task.repo_path}`);
     info(files.length ? files.map((f) => "  " + f).join("\n") : "  (no files reported)");
     const answer = await ask("proceed? [y/N]", "N");
+    closeAsk();
     if (!/^y(es)?$/i.test(answer)) {
       out("aborted", { merged: false });
       return EXIT.OK;
@@ -522,7 +489,7 @@ ${c.bold("commands")}
   stop <id>           kill the session, release locks, cancel the task
   reply <id> "<txt>"  answer a PAUSED task and resume it
   clean               remove worktrees for finished tasks
-  config              set the provider, model and API key
+  config              set up the provider, model and API key
   config show         print the current configuration
   init                prepare the current repository
   doctor              check prerequisites and credentials
