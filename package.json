@@ -1,6 +1,6 @@
 {
   "name": "@menglabs/mengcli",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Autonomous AI multi-agent coding CLI: describe the work, get back a git branch",
   "type": "module",
   "bin": {
@@ -38,7 +38,10 @@
     "tmux",
     "autonomous",
     "coding-agent",
-    "llm"
+    "llm",
+    "tui",
+    "repl",
+    "interactive"
   ],
   "license": "MIT",
   "devDependencies": {

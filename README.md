@@ -18,29 +18,59 @@ Describe the work, get back a reviewable git branch.
 
 ---
 
-You give it a task. It runs a team of AI agents in a detached tmux session and
-hands you a git branch to review.
+You give it a task. It runs a team of AI agents and hands you a git branch to
+review.
 
 Your working tree is never touched. Every task lives in its own `git worktree`
 and lands as a branch you merge yourself — or throw away.
 
+Run `mengcli` with no arguments for the interactive shell:
+
+```
+╭─────────────────────────────────────────────╮
+│ mengCLI  AI agent by Menglabs               │
+│                                             │
+│ repo   my-project on main                   │
+│ model  claude-sonnet-4-6                    │
+│ help   /help · submit an empty line to exit │
+╰─────────────────────────────────────────────╯
+
+› add pagination to the users endpoint
+task 7f3a91c2
+branch mengcli/add-pagination-to-the-users-3a91c2
+▶ planner started
+  ⚙ task_done Paginate with limit/offset, default 25.
+✔ planner done
+▶ riset started
+  ⚙ search_files "users"
+✔ riset done
+▶ dev started
+  ⚙ edit_file src/routes/users.ts
+  ⚙ write_file src/db/queries.ts
+✔ dev done
+  commit 4f2a1b9c
+✔ delivered  mengcli/add-pagination-to-the-users-3a91c2  8420 tokens · 6 iterations · 1m12s
+  /diff to review · /merge to accept
+
+› /merge
+merging mengcli/add-pagination-to-the-users-3a91c2 into main
+  src/routes/users.ts
+  src/db/queries.ts
+proceed? [y/N] y
+merged mengcli/add-pagination-to-the-users-3a91c2 → main
+```
+
+Tab completes slash commands, `↑` recalls previous prompts, and `Ctrl-C` stops
+the running task without leaving the shell.
+
+Prefer one-shot commands, or running in the background? Every slash command has
+a subcommand equivalent, and `run` detaches into tmux:
+
 ```bash
-$ mengcli run "add pagination to the users endpoint"
+$ mengcli run "convert the auth middleware to async/await"
 started 7f3a91c2  mengcli-b4e27f3a91c2
   follow:  mengcli logs 7f3a91c2
   status:  mengcli status
-
-$ mengcli status
-ID        STATUS     TOKENS  ITER  AGE     PROMPT
-7f3a91c2  DELIVERED  8420    6     2m ago  add pagination to the users endpoint
-
-$ mengcli diff --stat
- src/routes/users.ts | 24 +++++++++++++++++++-----
- src/db/queries.ts   | 11 +++++++++++
- 2 files changed, 30 insertions(+), 5 deletions(-)
-
-$ mengcli merge
-merged mengcli/add-pagination-to-the-users-3a91c2 → main
 ```
 
 ## Install
@@ -60,11 +90,11 @@ mengcli config                    # provider, model, API key
 mengcli doctor                    # verify everything is wired up
 
 cd ~/code/my-project
-mengcli run "convert the auth middleware to async/await"
+mengcli                           # interactive shell
 ```
 
-The task detaches immediately — close the terminal, lock your laptop, it keeps
-running. Check on it whenever:
+Tasks started with `mengcli run` detach immediately — close the terminal, lock
+your laptop, they keep running. Check on them whenever:
 
 ```bash
 mengcli status                    # all tasks and today's token spend
@@ -111,6 +141,7 @@ Agents run unattended, so the limits are enforced rather than politely requested
 
 | Command | Description |
 | --- | --- |
+| *(none)* / `chat` | open the interactive shell |
 | `run "<prompt>"` | start a task in a detached tmux session |
 | `status` | list tasks, locks and today's token spend |
 | `logs <id>` | show the live pane (`--follow` to attach) |
@@ -177,7 +208,7 @@ git clone https://github.com/simenglabs/mengcli.git
 cd mengcli
 bun install
 
-bun test                # 19 tests, no network required
+bun test                # 24 tests, no network required
 bun run typecheck
 bun src/index.ts help   # run without installing
 ```
@@ -187,7 +218,8 @@ Tests use a mock provider, so they cost nothing and need no API key.
 ## Not in this release
 
 Web UI, Telegram remote control, MCP servers, and the security/QA/migration
-teams are planned for later versions. See [`PRD.md`](./PRD.md) for the full
+teams are planned for later versions. The shell is a single scrolling pane; a
+split-pane layout with live task panels is on the list too. See [`PRD.md`](./PRD.md) for the full
 specification and release scope.
 
 ## License

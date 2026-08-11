@@ -72,6 +72,7 @@ interface Args {
 }
 
 function parseArgs(argv: string[]): Args {
+  if (argv.length === 0) return { cmd: "chat", positional: [], flags: {} };
   const positional: string[] = [];
   const flags: Record<string, string | boolean> = {};
   for (let i = 0; i < argv.length; i++) {
@@ -510,6 +511,8 @@ function cmdHelp(): number {
 ${c.bold("usage")}  mengcli <command> [options]
 
 ${c.bold("commands")}
+  ${c.dim("(no command)")}        open the interactive shell
+  chat                open the interactive shell
   run "<prompt>"      start a task in a detached tmux session
   status              list tasks, locks and today's token spend
   logs <id>           show the live pane (--follow to attach)
@@ -554,8 +557,15 @@ const HANDLERS: Record<string, (a: Args) => Promise<number> | number> = {
   reply: cmdReply,
   doctor: cmdDoctor,
   help: cmdHelp,
+  chat: cmdChat,
   _worker: cmdWorker,
 };
+
+async function cmdChat(): Promise<number> {
+  await checkPrereqs();
+  const { runTui } = await import("./tui.ts");
+  return runTui();
+}
 
 async function main(): Promise<number> {
   const args = parseArgs(process.argv.slice(2));
