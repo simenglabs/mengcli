@@ -1,4 +1,6 @@
 import { Database } from "bun:sqlite";
+import { mkdirSync } from "fs";
+import { dirname } from "path";
 import { DB_FILE, ensureDirs } from "./paths.ts";
 
 export const SCHEMA = `
@@ -147,6 +149,8 @@ export function db(): Database {
   if (_db && _dbPath === path) return _db;
   _db?.close();
   ensureDirs();
+  // MENGCLI_DB may point outside STATE_DIR, so ensureDirs() is not enough.
+  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   const d = new Database(path, { create: true });
   // WAL is mandatory: several tmux sessions write concurrently.
   d.exec("PRAGMA journal_mode = WAL");
