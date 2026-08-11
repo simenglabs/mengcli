@@ -1,0 +1,111 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g. 1.0.1). Leave blank to use package.json."
+        required: false
+      dry_run:
+        description: "Run every step but skip the actual publish"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    name: publish to npm
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Install tmux
+        run: sudo apt-get update -qq && sudo apt-get install -y tmux
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Configure git
+        run: |
+          git config --global user.email "ci@menglabs.dev"
+          git config --global user.name "CI"
+
+      # The gate: nothing ships unless the suite and typecheck pass.
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun test
+
+      - name: Set version from input
+        if: github.event_name == 'workflow_dispatch' && inputs.version != ''
+        run: npm version "${{ inputs.version }}" --no-git-tag-version
+
+      # A release tag is the source of truth when triggered by a release.
+      - name: Set version from release tag
+        if: github.event_name == 'release'
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          npm version "$TAG" --no-git-tag-version --allow-same-version
+
+      - name: Check the version is not already published
+        id: check
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          echo "name=$NAME"       >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::$NAME@$VERSION is already on npm; skipping publish"
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify the tarball installs and runs
+        run: |
+          npm pack
+          TARBALL=$(ls menglabs-mengcli-*.tgz)
+          mkdir -p /tmp/installcheck && cd /tmp/installcheck
+          npm init -y >/dev/null
+          npm install "$GITHUB_WORKSPACE/$TARBALL"
+          ./node_modules/.bin/mengcli --version
+          ./node_modules/.bin/mengcli help >/dev/null
+
+      - name: Publish
+        if: steps.check.outputs.already == 'false' && !inputs.dry_run
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Summary
+        run: |
+          {
+            echo "### ${{ steps.check.outputs.name }}@${{ steps.check.outputs.version }}"
+            if [ "${{ steps.check.outputs.already }}" = "true" ]; then
+              echo "Skipped — this version is already on npm."
+            elif [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "Dry run — everything passed, nothing was published."
+            else
+              echo "Published."
+              echo ""
+              echo '```bash'
+              echo "npm install -g ${{ steps.check.outputs.name }}"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

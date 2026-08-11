@@ -1,5 +1,5 @@
 {
-  "name": "mengcli",
+  "name": "@menglabs/mengcli",
   "version": "1.0.0",
   "description": "Autonomous AI multi-agent coding CLI: describe the work, get back a git branch",
   "type": "module",
@@ -10,7 +10,8 @@
     "bin",
     "src",
     "skills",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "dev": "bun src/index.ts",
@@ -46,11 +47,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/menglabs/mengcli.git"
+    "url": "git+https://github.com/simenglabs/mengcli.git"
   },
-  "homepage": "https://github.com/menglabs/mengcli#readme",
+  "homepage": "https://github.com/simenglabs/mengcli#readme",
   "bugs": {
-    "url": "https://github.com/menglabs/mengcli/issues"
+    "url": "https://github.com/simenglabs/mengcli/issues"
   },
-  "author": "Menglabs"
+  "author": "Menglabs",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
 }
